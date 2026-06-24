@@ -33,6 +33,7 @@ class ActivityTracker: NSObject, CLLocationManagerDelegate {
     // 状態
     var isTracking: Bool = false
     var startTime: Date?
+    var endTime: Date?
 
     override init() {
         super.init()
@@ -45,6 +46,7 @@ class ActivityTracker: NSObject, CLLocationManagerDelegate {
     func startTracking() {
         isTracking = true
         startTime = Date()
+        endTime = nil
         stepCount = 0
         distance = 0
         locations = []
@@ -69,6 +71,7 @@ class ActivityTracker: NSObject, CLLocationManagerDelegate {
 
     func stopTracking() {
         isTracking = false
+        endTime = Date()
         pedometer.stopUpdates()
         locationManager.stopUpdatingLocation()
     }
@@ -82,11 +85,6 @@ class ActivityTracker: NSObject, CLLocationManagerDelegate {
     }
 
     // MARK: - 計算プロパティ
-
-    var elapsedTime: TimeInterval {
-        guard let start = startTime else { return 0 }
-        return Date().timeIntervalSince(start)
-    }
 
     var distanceInKm: Double {
         distance / 1000
@@ -106,7 +104,13 @@ class ActivityTracker: NSObject, CLLocationManagerDelegate {
 
 struct ContentView: View {
     @State private var tracker = ActivityTracker()
-    @State private var timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
+    // 経過時間（startTime からの差分。計測中は現在時刻 date、停止後は endTime で固定）
+    private func elapsedTime(at date: Date) -> TimeInterval {
+        guard let start = tracker.startTime else { return 0 }
+        let end = tracker.endTime ?? date
+        return max(0, end.timeIntervalSince(start))
+    }
 
     var body: some View {
         NavigationStack {
@@ -129,29 +133,26 @@ struct ContentView: View {
                 .padding()
             }
             .navigationTitle("活動トラッカー")
-            .onReceive(timer) { _ in
-                // タイマーの更新をトリガー（UI再描画のため）
-                if tracker.isTracking {
-                    // @Observableなので自動で更新される
-                }
-            }
         }
     }
 
     // MARK: - タイマーセクション
 
     private var timerSection: some View {
-        VStack(spacing: 4) {
-            Text(formatTime(tracker.elapsedTime))
-                .font(.system(size: 48, weight: .thin, design: .monospaced))
+        // TimelineView が1秒ごとに context.date を更新し、この中だけが再描画される
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            VStack(spacing: 4) {
+                Text(formatTime(elapsedTime(at: context.date)))
+                    .font(.system(size: 48, weight: .thin, design: .monospaced))
 
-            if tracker.isTracking {
-                Text("計測中")
-                    .font(.caption)
-                    .foregroundStyle(.green)
+                if tracker.isTracking {
+                    Text("計測中")
+                        .font(.caption)
+                        .foregroundStyle(.green)
+                }
             }
+            .padding()
         }
-        .padding()
     }
 
     // MARK: - 統計グリッド

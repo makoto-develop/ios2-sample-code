@@ -169,6 +169,9 @@ struct MagnifyDemoView: View {
             Image(systemName: "star.fill")
                 .font(.system(size: 100))
                 .foregroundStyle(.yellow)
+                // タッチ判定を300×300の透明な領域に広げる
+                .frame(width: 300, height: 300)
+                .contentShape(Rectangle())
                 .scaleEffect(scale)
                 .gesture(
                     MagnifyGesture()
@@ -216,6 +219,9 @@ struct RotateDemoView: View {
             Image(systemName: "arrow.up")
                 .font(.system(size: 80))
                 .foregroundStyle(.red)
+                // タッチ判定を300×300の透明な領域に広げる
+                .frame(width: 300, height: 300)
+                .contentShape(Rectangle())
                 .rotationEffect(angle)
                 .gesture(
                     RotateGesture()
@@ -263,6 +269,9 @@ struct CombinedDemoView: View {
             Image(systemName: "photo.artframe")
                 .font(.system(size: 120))
                 .foregroundStyle(.indigo)
+                // タッチ判定を300×300の透明な領域に広げる
+                .frame(width: 300, height: 300)
+                .contentShape(Rectangle())
                 .scaleEffect(scale)
                 .rotationEffect(angle)
                 .offset(offset)
@@ -278,7 +287,9 @@ struct CombinedDemoView: View {
                             lastOffset = offset
                         }
                 )
-                .gesture(
+                // 複数のジェスチャーを「同時に」効かせるには
+                // .gesture を重ねるのではなく .simultaneousGesture を使う
+                .simultaneousGesture(
                     MagnifyGesture()
                         .onChanged { value in
                             scale = lastScale * value.magnification
@@ -287,7 +298,7 @@ struct CombinedDemoView: View {
                             lastScale = scale
                         }
                 )
-                .gesture(
+                .simultaneousGesture(
                     RotateGesture()
                         .onChanged { value in
                             angle = lastAngle + value.rotation
